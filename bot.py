@@ -19,8 +19,6 @@ logger = logging.getLogger(__name__)
 watchers = []
 last_response = None
 
-# Define a few command handlers. These usually take the two arguments update and
-# context.
 def start(update: Update, _: CallbackContext) -> None:
     """Send a message when the command /start is issued."""
 
@@ -40,14 +38,6 @@ def start(update: Update, _: CallbackContext) -> None:
 def help_command(update: Update, _: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
     update.message.reply_text('Help!')
-
-
-def echo(update: Update, _: CallbackContext) -> None:
-    """Echo the user message."""
-    update.message.reply_text(update.message.text)
-
-
-
 
 def notifyWatchers(updater: Updater):
     global watchers
@@ -72,27 +62,17 @@ def poll_impfdashboard(updater: Updater):
 def main() -> None:
     """Start the bot."""
     global watchers
-    # Create the Updater and pass it your bot's token.
     token = open("token.txt", "r").readline()
     watchers = json.loads(open("watchers.json", "r").read())
 
     updater = Updater(token)
-    # Get the dispatcher to register handlers
     dispatcher = updater.dispatcher
-    # on different commands - answer in Telegram
     dispatcher.add_handler(CommandHandler("start", start))
     dispatcher.add_handler(CommandHandler("help", help_command))
 
-    # on non command i.e message - echo the message on Telegram
-    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, echo))
-
-    # Start the Bot
     updater.start_polling()
     poll_impfdashboard(updater)
-
-    # Run the bot until you press Ctrl-C or the process receives SIGINT,
-    # SIGTERM or SIGABRT. This should be used most of the time, since
-    # start_polling() is non-blocking and will stop the bot gracefully.
+    
     updater.idle()
 
 
