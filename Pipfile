@@ -7,6 +7,3 @@ name = "pypi"
 python-telegram-bot = "*"
 
 [dev-packages]
-
-[requires]
-python_version = ">=3.7"
