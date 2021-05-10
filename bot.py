@@ -39,16 +39,14 @@ def start(update: Update, _: CallbackContext) -> None:
 
 def help_command(update: Update, _: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
-    global last_contents
     update.message.reply_text('Help!')
-    last_contents = "lul"
 
 def notifyWatchers(updater: Updater, impfidenz: Optional[float]):
     global watchers
     text = "Das Impfdashboard wurde aktualisiert 🎉!\n"
     if impfidenz is not None:
-        text += "Die heutige bundesweite _7-Tage-Impfidenz_ (Erstimpfungen / Hunderttausend Einwohner und 7 Tage) beträgt:\n"
-        text += f"*{impfidenz:.2f}*\n"
+        text += "Die heutige bundesweite _7-Tage-Impfidenz_ (Erstimpfungen pro Hunderttausend Einwohner und 7 Tage) beträgt:\n\n"
+        text += f"*{impfidenz:.2f}*\n\n".replace('.', ',')
     text += "[https://impfdashboard.de](https://impfdashboard.de)"
     for watcher in watchers:
         updater.bot.send_message(chat_id=watcher, text=text, parse_mode='Markdown')
