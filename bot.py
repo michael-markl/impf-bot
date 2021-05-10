@@ -2,7 +2,9 @@
 
 import logging
 import json
+import csv
 from threading import Timer
+from typing import Optional
 import urllib.request
 
 
@@ -17,7 +19,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 watchers = []
-last_response = None
+last_contents = None
 
 def start(update: Update, _: CallbackContext) -> None:
     """Send a message when the command /start is issued."""
@@ -37,22 +39,51 @@ def start(update: Update, _: CallbackContext) -> None:
 
 def help_command(update: Update, _: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
+    global last_contents
     update.message.reply_text('Help!')
+    last_contents = "lul"
 
-def notifyWatchers(updater: Updater):
+def notifyWatchers(updater: Updater, impfidenz: Optional[float]):
     global watchers
+    text = "Das Impfdashboard wurde aktualisiert 🎉!\n"
+    if impfidenz is not None:
+        text += "Die heutige bundesweite _7-Tage-Impfidenz_ (Erstimpfungen / Hunderttausend Einwohner und 7 Tage) beträgt:\n"
+        text += f"*{impfidenz:.2f}*\n"
+    text += "[https://impfdashboard.de](https://impfdashboard.de)"
     for watcher in watchers:
-        updater.bot.send_message(chat_id=watcher, text="Das Impfdashboard wurde aktualisiert 🎉!\nhttps://impfdashboard.de")
+        updater.bot.send_message(chat_id=watcher, text=text, parse_mode='Markdown')
 
+
+def get_impfidenz(csv_file):
+    reader = csv.reader(csv_file, delimiter="\t")
+    rows = []
+    for row in reader:
+        rows.append(row)
+    index = -1
+    for i in range(len(rows[0])):
+        if rows[0][i] == "dosen_erst_differenz_zum_vortag":
+            index = i
+            break
+    impfidenz = sum(int(rows[i][index]) for i in range(-7, 0))
+    return impfidenz / (7. * 831.57201)
 
 def poll_impfdashboard(updater: Updater):
-    global last_response
+    global last_contents
+    print("Polling impfdashboard...")
     try:
-        contents = urllib.request.urlopen("https://impfdashboard.de/static/data/germany_vaccinations_by_state.tsv").read()
-        if last_response is not None:
-            if contents != last_response:
-                notifyWatchers(updater)
-        last_response = contents
+        url = 'https://impfdashboard.de/static/data/germany_vaccinations_timeseries_v2.tsv'
+        response = urllib.request.urlopen(url)
+        lines = [l.decode('utf-8') for l in response.readlines()]
+        contents = '\n'.join(lines)
+        
+        if last_contents is not None:
+            if contents != last_contents:
+                impfidenz = None
+                try:
+                    impfidenz = get_impfidenz(lines)
+                finally:
+                    notifyWatchers(updater, impfidenz)
+        last_contents = contents
     except Exception as e:
         logger.log(level=logging.ERROR, msg=e)
     finally:
