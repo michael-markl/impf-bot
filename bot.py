@@ -63,7 +63,7 @@ def get_impfidenz(csv_file):
             index = i
             break
     impfidenz = sum(int(rows[i][index]) for i in range(-7, 0))
-    return impfidenz / (7. * 831.57201)
+    return impfidenz / 831.57201
 
 def poll_impfdashboard(updater: Updater):
     global last_contents
