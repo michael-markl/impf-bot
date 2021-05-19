@@ -1,15 +1,14 @@
 #!/usr/bin/env python
 
-import logging
-import json
 import csv
+import json
+import logging
+import urllib.request
 from threading import Timer
 from typing import Optional
-import urllib.request
 
-
-from telegram import Update, ForceReply, Chat
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram import Update, Chat
+from telegram.ext import Updater, CommandHandler, CallbackContext
 
 # Enable logging
 logging.basicConfig(
@@ -20,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 watchers = []
 last_contents = None
+
 
 def start(update: Update, _: CallbackContext) -> None:
     """Send a message when the command /start is issued."""
@@ -41,6 +41,7 @@ def help_command(update: Update, _: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
     update.message.reply_text('Help!')
 
+
 def notifyWatchers(updater: Updater, impfidenz: Optional[float]):
     global watchers
     text = "Das Impfdashboard wurde aktualisiert 🎉!\n"
@@ -49,7 +50,10 @@ def notifyWatchers(updater: Updater, impfidenz: Optional[float]):
         text += f"*{impfidenz:.2f}*\n\n".replace('.', ',')
     text += "[https://impfdashboard.de](https://impfdashboard.de)"
     for watcher in watchers:
-        updater.bot.send_message(chat_id=watcher, text=text, parse_mode='Markdown')
+        try:
+            updater.bot.send_message(chat_id=watcher, text=text, parse_mode='Markdown')
+        except Exception as e:
+            logger.log(level=logging.ERROR, msg=e)
 
 
 def get_impfidenz(csv_file):
@@ -65,6 +69,7 @@ def get_impfidenz(csv_file):
     impfidenz = sum(int(rows[i][index]) for i in range(-7, 0))
     return impfidenz / 831.57201
 
+
 def poll_impfdashboard(updater: Updater):
     global last_contents
     print("Polling impfdashboard...")
@@ -73,7 +78,7 @@ def poll_impfdashboard(updater: Updater):
         response = urllib.request.urlopen(url)
         lines = [l.decode('utf-8') for l in response.readlines()]
         contents = '\n'.join(lines)
-        
+
         if last_contents is not None:
             if contents != last_contents:
                 impfidenz = None
@@ -101,7 +106,7 @@ def main() -> None:
 
     updater.start_polling()
     poll_impfdashboard(updater)
-    
+
     updater.idle()
 
 
