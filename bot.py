@@ -41,13 +41,15 @@ def help_command(update: Update, _: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
     update.message.reply_text('Help!')
 
-
-def notifyWatchers(updater: Updater, impfidenz: Optional[float]):
+def notifyWatchers(updater: Updater, first_impfidenz: Optional[float], total_impfidenz):
     global watchers
-    text = "Das Impfdashboard wurde aktualisiert 🎉!\n"
-    if impfidenz is not None:
-        text += "Die heutige bundesweite _7-Tage-Impfidenz_ (Erstimpfungen pro Hunderttausend Einwohner und 7 Tage) beträgt:\n\n"
-        text += f"*{impfidenz:.2f}*\n\n".replace('.', ',')
+    text = "Das Impfdashboard wurde aktualisiert 🎉!\n\n"
+    if first_impfidenz is not None:
+        text += "Die heutige bundesweite _7-Tage-Erst-Impfidenz_ (Erstimpfungen pro Hunderttausend Einwohner und 7 Tage) beträgt:\n"
+        text += f"*{first_impfidenz:.2f}*\n\n".replace('.', ',')
+    if total_impfidenz is not None:
+        text += "Die heutige bundesweite _7-Tage-Gesamt-Impfidenz_ (Impfungen pro Hunderttausend Einwohner und 7 Tage) beträgt:\n"
+        text += f"*{total_impfidenz:.2f}*\n\n".replace('.', ',')
     text += "[https://impfdashboard.de](https://impfdashboard.de)"
     for watcher in watchers:
         try:
@@ -61,13 +63,19 @@ def get_impfidenz(csv_file):
     rows = []
     for row in reader:
         rows.append(row)
-    index = -1
+    first_index = -1
+    total_index = -1
     for i in range(len(rows[0])):
         if rows[0][i] == "dosen_erst_differenz_zum_vortag":
-            index = i
+            first_index = i
             break
-    impfidenz = sum(int(rows[i][index]) for i in range(-7, 0))
-    return impfidenz / 831.57201
+    for i in range(len(rows[0])):
+        if rows[0][i] == "dosen_differenz_zum_vortag":
+            total_index = i
+            break
+    erst_impfidenz = sum(int(rows[i][first_index]) for i in range(-7, 0))
+    total_impfidenz = sum(int(rows[i][total_index]) for i in range(-7, 0))
+    return erst_impfidenz / 831.57201, total_impfidenz / 831.57201
 
 
 def poll_impfdashboard(updater: Updater):
@@ -83,9 +91,9 @@ def poll_impfdashboard(updater: Updater):
             if contents != last_contents:
                 impfidenz = None
                 try:
-                    impfidenz = get_impfidenz(lines)
+                    erst_impfidenz, total_impfidenz = get_impfidenz(lines)
                 finally:
-                    notifyWatchers(updater, impfidenz)
+                    notifyWatchers(updater, erst_impfidenz, total_impfidenz)
         last_contents = contents
     except Exception as e:
         logger.log(level=logging.ERROR, msg=e)
